@@ -686,7 +686,11 @@ window.addEventListener("keydown", e => {
 /* ============================================================
    SPEECH MODE  (native Web Speech API — free, on-device/browser)
    ============================================================ */
-let rec = null, listening = false, wantListening = false;
+/* One persistent, continuous recognition session is kept alive across
+   words. Starting a new session per word makes Edge on iOS flash a
+   "Microphone access allowed" banner every time, so we only start a
+   session when none is running and let it span many words. */
+let rec = null, listening = false, wantListening = false, consumed = 0;
 
 function normalize(s){
   return s.toLowerCase().replace(/[^a-z' ]/g, " ").replace(/\s+/g, " ").trim();
@@ -701,24 +705,30 @@ function isMatch(transcript, target){
   return clean.split(" ").some(tok => accept.has(tok));     // whole tokens
 }
 
-function startListening(){
-  if (!SR || settings.mode !== "speech" || finished) return;
-  wantListening = true;
-  if (listening) return;
+function ensureRec(){
+  if (rec) return;
   rec = new SR();
   rec.lang = "en-GB";
-  rec.continuous = false;
+  rec.continuous = true;                 // keep one session across words
   rec.interimResults = true;
   rec.maxAlternatives = 5;
 
-  rec.onstart = () => { listening = true; ear.classList.add("listening"); earText.textContent = "I'm listening…"; };
+  rec.onstart = () => {
+    listening = true;
+    consumed = 0;                        // results list resets per session
+    ear.classList.add("listening");
+    earText.textContent = "I'm listening…";
+  };
   rec.onresult = e => {
-    if (advancing) return;
-    for (const result of e.results){
-      for (const alt of result){
+    if (advancing || !current){
+      consumed = e.results.length;       // drop speech heard mid-transition
+      return;
+    }
+    for (let i = Math.max(e.resultIndex, consumed); i < e.results.length; i++){
+      for (const alt of e.results[i]){
         if (isMatch(alt.transcript, current)){
-          stopListening();
-          advance(true);
+          consumed = i + 1;              // don't re-match this utterance
+          advance(true);                 // recogniser keeps running
           return;
         }
       }
@@ -736,24 +746,32 @@ function startListening(){
   rec.onend = () => {
     listening = false;
     ear.classList.remove("listening");
-    if (wantListening && settings.mode === "speech" && !advancing){
-      setTimeout(() => { try { rec.start(); } catch {} }, 250);
+    if (wantListening && settings.mode === "speech" && !finished){
+      setTimeout(() => {
+        if (wantListening && !listening){ try { rec.start(); } catch {} }
+      }, 250);
     }
   };
+}
+
+function startListening(){
+  if (!SR || settings.mode !== "speech" || finished) return;
+  wantListening = true;
+  if (listening) return;
+  ensureRec();
   try { rec.start(); } catch {}
 }
 
 function stopListening(){
   wantListening = false;
-  if (rec){ try { rec.onend = null; rec.stop(); } catch {} }
+  if (rec && listening){ try { rec.stop(); } catch {} }
   listening = false;
   ear.classList.remove("listening");
 }
 
 $("skipBtn").addEventListener("pointerdown", e => {
   e.stopPropagation();
-  stopListening();
-  advance(false);
+  advance(false);                        // no mic restart needed
 });
 
 $("backBtn").addEventListener("pointerdown", e => {
