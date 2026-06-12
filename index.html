@@ -142,6 +142,13 @@
     transition:left .5s cubic-bezier(.2,1.2,.4,1);
     filter:drop-shadow(0 .4vmin .4vmin rgba(0,0,0,.25));
   }
+  #progressCount{
+    position:absolute; top:50%; left:100%;
+    transform:translate(1.6vmin,-50%);
+    font-size:max(15px, 2.6vmin); font-weight:700;
+    color:var(--ink); white-space:nowrap;
+    text-shadow:0 .2vmin 0 rgba(255,255,255,.7);
+  }
 
   /* ---------- finish screen ---------- */
   #finish{
@@ -197,8 +204,15 @@
   .round-btn:active{ transform:scale(.9); }
   #gearBtn{ top:2.2vh; right:2vw; background:var(--sun); }
   #speakBtn{ bottom:2.2vh; right:2vw; background:#fff; }
-  #skipBtn{
+  #backBtn{
     bottom:2.2vh; left:2vw;
+    width:max(44px, 6.5vmin); height:max(44px, 6.5vmin);
+    font-size:max(18px, 3.2vmin);
+    background:#fff;
+  }
+  #skipBtn{
+    position:fixed; z-index:5;
+    bottom:2.2vh; left:calc(2vw + max(44px, 6.5vmin) + 1.6vmin);
     width:auto; border-radius:6vmin;
     padding:0 3.4vmin;
     font-size:max(17px, 2.9vmin); font-weight:700;
@@ -334,6 +348,7 @@
   <div id="progress" aria-label="Progress through the words">
     <div id="progressTrack"><div id="progressFill"></div></div>
     <span id="progressEgg">🍳</span>
+    <span id="progressCount" aria-live="polite"></span>
   </div>
 
   <div id="ear"><span id="earIcon">👂</span><span id="earText">I'm listening…</span></div>
@@ -349,6 +364,7 @@
 
   <button id="gearBtn" class="round-btn" aria-label="Settings">⚙️</button>
   <button id="speakBtn" class="round-btn" aria-label="Hear the word">🔊</button>
+  <button id="backBtn" class="round-btn" aria-label="Back to the previous word">↩️</button>
   <button id="skipBtn" aria-label="Skip this word">Skip ⏭️</button>
 
   <div id="overlay">
@@ -447,7 +463,7 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const LS_KEY = "eviegh-settings";
 
 const settings = Object.assign(
-  { mode:"manual", diff:"easy", sound:true },
+  { mode:"manual", diff:"easy", sound:false },
   (() => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } })()
 );
 if (settings.mode === "speech" && !SR) settings.mode = "manual";
@@ -457,6 +473,7 @@ function saveSettings(){
 }
 
 let deck = [];
+let history = [];
 let current = null;
 let advancing = false;
 let total = 0;
@@ -481,11 +498,21 @@ function buildDeck(){
     [deck[i], deck[j]] = [deck[j], deck[i]];
   }
   total = deck.length;
+  history = [];
 }
 
 function nextWord(){
   if (!deck.length){ finishGame(); return; }           // every word seen once
   current = deck.pop();
+  history.push(current);
+  showWord(current);
+  updateProgress();
+}
+
+function prevWord(){
+  if (finished || advancing || history.length < 2) return;
+  deck.push(history.pop());                            // current returns to deck
+  current = history[history.length - 1];
   showWord(current);
   updateProgress();
 }
@@ -495,6 +522,7 @@ function updateProgress(){
   const pct = total ? (done / total) * 100 : 0;
   $("progressFill").style.width = pct + "%";
   $("progressEgg").style.left = pct + "%";
+  $("progressCount").textContent = done + "/" + total;
 }
 
 function showWord(w){
@@ -726,6 +754,12 @@ $("skipBtn").addEventListener("pointerdown", e => {
   e.stopPropagation();
   stopListening();
   advance(false);
+});
+
+$("backBtn").addEventListener("pointerdown", e => {
+  e.stopPropagation();
+  blip();
+  prevWord();
 });
 
 /* ============================================================
