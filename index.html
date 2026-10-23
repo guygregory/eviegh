@@ -101,6 +101,34 @@
     white-space:nowrap;
     transform-origin:center;
   }
+  #word.hinted{ padding-top:.4em; padding-bottom:.3em; }
+  .sound{
+    display:inline-block;
+    position:relative;
+  }
+  .sound::after{
+    content:"";
+    position:absolute;
+    background:currentColor;
+  }
+  .sound.dot::after{
+    width:.14em; height:.14em;
+    border-radius:50%;
+    left:50%; bottom:-.23em;
+    transform:translateX(-50%);
+  }
+  .sound.line::after{
+    left:.045em; right:.045em; bottom:-.18em;
+    height:.05em; border-radius:.025em;
+  }
+  .split-letter{ display:inline-block; }
+  .sound-arc{
+    position:absolute; left:0; bottom:100%;
+    width:100%; height:.36em;
+    overflow:visible; pointer-events:none;
+    fill:none; stroke:currentColor;
+    stroke-width:.05em;
+  }
   .pop-in{ animation:popIn .45s cubic-bezier(.2,1.6,.4,1) both; }
   @keyframes popIn{
     from{ transform:scale(.2) rotate(-8deg); opacity:0; }
@@ -202,6 +230,15 @@
     padding:0;
   }
   .round-btn:active{ transform:scale(.9); }
+  #phonicsBtn{ top:2.2vh; left:2vw; color:var(--ink); }
+  #phonicsBtn[aria-pressed="true"]{ background:var(--seuss-green); color:#fff; }
+  #phonicsBtn:focus-visible{ outline:3px solid var(--ink); outline-offset:4px; }
+  .phonics-icon{ position:relative; padding-bottom:.15em; }
+  .phonics-icon::after{
+    content:""; position:absolute; bottom:0; left:50%;
+    width:.14em; height:.14em; border-radius:50%;
+    background:currentColor; transform:translateX(-50%);
+  }
   #gearBtn{ top:2.2vh; right:2vw; background:var(--sun); }
   #speakBtn{ bottom:2.2vh; right:2vw; background:#fff; }
   #backBtn{
@@ -223,16 +260,28 @@
 
   /* ---------- listening indicator ---------- */
   #ear{
-    position:fixed; top:2.2vh; left:2vw; z-index:5;
+    position:fixed; top:calc(2.2vh + max(52px, 8.5vmin) + .6vmin); left:2vw; z-index:5;
     display:none; align-items:center; gap:1.4vmin;
     background:#fff; border:.55vmin solid var(--ink);
-    border-radius:6vmin; padding:1vmin 2.6vmin;
+    border-radius:6vmin; padding:.5vmin 2.6vmin;
     font-size:max(15px, 2.7vmin); font-weight:600;
     box-shadow:0 .7vmin 0 rgba(0,0,0,.2);
   }
   body.speech-mode #ear{ display:flex; }
   #earIcon{ font-size:max(22px, 3.6vmin); }
   #ear.listening #earIcon{ animation:pulse 1.1s ease-in-out infinite; }
+  @media (max-width:600px), (max-height:600px){
+    #ear{
+      top:calc(2.2vh + max(52px, 8.5vmin) - 26px);
+      left:calc(2vw + max(52px, 8.5vmin) - 18px);
+      padding:2px; border-width:2px; pointer-events:none;
+    }
+    #earIcon{ font-size:18px; }
+    #earText{
+      position:absolute; width:1px; height:1px;
+      overflow:hidden; clip-path:inset(50%); white-space:nowrap;
+    }
+  }
   @keyframes pulse{
     0%,100%{ transform:scale(1); }
     50%{ transform:scale(1.35); }
@@ -326,6 +375,8 @@
     Word list lives in the WORDS array in the script below.
     words.csv in this folder is the human-editable reference copy —
     if you change one, update the other to match.
+    PHONICS below contains the hard-coded sound groups for every word.
+    Keep its keys and spellings in sync too; like also has a split-sound arc.
   -->
 
   <!-- background whimsy -->
@@ -342,7 +393,7 @@
   <svg class="doodle d4" viewBox="0 0 80 100"><g stroke="#16302b" stroke-width="3"><path d="M20 14 L60 14 L64 78 L16 78 Z" fill="#fffdf5"/><path d="M19 24 L61 24 L62 40 L18 40 Z" fill="#e63946" stroke="none"/><path d="M17 52 L63 52 L64 68 L16 68 Z" fill="#e63946" stroke="none"/><path d="M20 14 L60 14 L64 78 L16 78 Z" fill="none"/><ellipse cx="40" cy="82" rx="34" ry="9" fill="#fffdf5"/></g></svg>
 
   <main id="stage" aria-label="Flashcard – tap to go to the next word">
-    <div id="card"><div id="word" aria-live="polite"></div></div>
+    <div id="card"><div id="word" role="img" aria-live="polite"></div></div>
   </main>
 
   <div id="progress" aria-label="Progress through the words">
@@ -362,6 +413,7 @@
     <button id="againBtn">Play again 🔁</button>
   </div>
 
+  <button id="phonicsBtn" class="round-btn" aria-label="Show phonics hints" aria-pressed="false" title="Show phonics hints"><span class="phonics-icon" aria-hidden="true">a</span></button>
   <button id="gearBtn" class="round-btn" aria-label="Settings">⚙️</button>
   <button id="speakBtn" class="round-btn" aria-label="Hear the word">🔊</button>
   <button id="backBtn" class="round-btn" aria-label="Back to the previous word">↩️</button>
@@ -426,6 +478,21 @@ const WORDS = [
   { w:"try",      tier:3 }, { w:"would",   tier:3 }
 ];
 
+/* Hyphens separate marking groups: one letter gets a dot, several a line.
+   These are deliberately hand-authored, including the irregular spellings. */
+const PHONICS = {
+  a:"a", am:"a-m", and:"a-n-d", anywhere:"a-n-y-wh-ere", are:"are",
+  be:"b-e", boat:"b-oa-t", box:"b-o-x", car:"c-ar", could:"c-ould",
+  dark:"d-ar-k", do:"d-o", eat:"ea-t", the:"th-e", eggs:"e-gg-s",
+  fox:"f-o-x", goat:"g-oa-t", good:"g-oo-d", green:"g-r-ee-n", ham:"h-a-m",
+  here:"h-ere", house:"h-ou-se", I:"I", if:"i-f", in:"i-n", let:"l-e-t",
+  like:"l-ike", may:"m-ay", me:"m-e", mouse:"m-ou-se", not:"n-o-t",
+  on:"o-n", or:"or", rain:"r-ai-n", Sam:"S-a-m", say:"s-ay",
+  see:"s-ee", so:"s-o", thank:"th-a-nk", that:"th-a-t", them:"th-e-m",
+  there:"th-ere", they:"th-ey", train:"t-r-ai-n", tree:"t-r-ee",
+  try:"t-r-y", will:"w-i-ll", with:"w-i-th", would:"w-ould", you:"y-ou"
+};
+
 /* Sounds-alike words the speech recogniser may return instead.
    Matching is whole-token only — never substring — to avoid
    false positives on tiny words. */
@@ -480,6 +547,7 @@ let advancing = false;
 let total = 0;
 let finished = false;
 let deckDirty = false;
+let phonicsEnabled = false;
 
 const $ = id => document.getElementById(id);
 const stage = $("stage"), wordEl = $("word"), hintEl = $("hint"),
@@ -531,16 +599,60 @@ function updateProgress(){
 function showWord(w){
   wordEl.classList.remove("pop-in", "pop-out");
   void wordEl.offsetWidth;                              // restart animation
-  wordEl.textContent = w;
+  renderWord(w);
   fitWord();
   wordEl.classList.add("pop-in");
+}
+
+function renderWord(w){
+  wordEl.textContent = "";
+  wordEl.classList.toggle("hinted", phonicsEnabled);
+  wordEl.setAttribute("aria-label", w);
+  const text = document.createElement("span");
+  text.setAttribute("aria-hidden", "true");
+  if (!phonicsEnabled){
+    text.textContent = w;
+  } else {
+    for (const group of PHONICS[w].split("-")){
+      const sound = document.createElement("span");
+      sound.className = "sound " + (group.length === 1 ? "dot" : "line");
+      if (w === "like" && group === "ike"){
+        for (const letter of group){
+          const letterEl = document.createElement("span");
+          letterEl.className = "split-letter";
+          letterEl.textContent = letter;
+          sound.appendChild(letterEl);
+        }
+        const arc = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        arc.classList.add("sound-arc");
+        arc.setAttribute("aria-hidden", "true");
+        arc.appendChild(document.createElementNS("http://www.w3.org/2000/svg", "path"));
+        sound.appendChild(arc);
+      } else {
+        sound.textContent = group;
+      }
+      text.appendChild(sound);
+    }
+  }
+  wordEl.appendChild(text);
+}
+
+function fitArc(){
+  const arc = wordEl.querySelector(".sound-arc");
+  if (!arc) return;
+  const letters = arc.parentElement.querySelectorAll(".split-letter");
+  const start = letters[0].offsetLeft + letters[0].offsetWidth / 2;
+  const end = letters[2].offsetLeft + letters[2].offsetWidth / 2;
+  const height = arc.clientHeight;
+  arc.querySelector("path").setAttribute("d",
+    `M ${start} ${height} C ${start} 0, ${end} 0, ${end} ${height}`);
 }
 
 /* Scale the word to fill the card, whatever its length. */
 function fitWord(){
   const card = $("card");
   const availW = card.clientWidth * 0.82;
-  const availH = card.clientHeight * 0.62;
+  const availH = card.clientHeight * (phonicsEnabled ? 0.78 / 1.7 : 0.62);
   let size = availH;
   wordEl.style.fontSize = size + "px";
   // shrink until it fits horizontally
@@ -548,8 +660,24 @@ function fitWord(){
     size *= availW / wordEl.scrollWidth;
     wordEl.style.fontSize = size + "px";
   }
+  fitArc();
 }
 window.addEventListener("resize", fitWord);
+document.fonts.ready.then(fitWord);
+document.fonts.addEventListener("loadingdone", fitWord);
+
+$("phonicsBtn").addEventListener("click", () => {
+  phonicsEnabled = !phonicsEnabled;
+  const button = $("phonicsBtn");
+  button.setAttribute("aria-pressed", String(phonicsEnabled));
+  const label = phonicsEnabled ? "Hide phonics hints" : "Show phonics hints";
+  button.setAttribute("aria-label", label);
+  button.title = label;
+  if (current){
+    renderWord(current);
+    fitWord();
+  }
+});
 
 /* ============================================================
    SOUNDS  (WebAudio – no files needed)
@@ -679,6 +807,7 @@ stage.addEventListener("pointerdown", () => {
   if (settings.mode === "manual") advance(false);
 });
 window.addEventListener("keydown", e => {
+  if (e.target.closest("button")?.id === "phonicsBtn") return;
   if (e.code === "Space" && !overlay.classList.contains("open")){
     e.preventDefault();
     if (finished){ blip(); restartGame(); return; }
