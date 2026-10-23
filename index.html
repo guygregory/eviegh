@@ -379,11 +379,12 @@
         <div id="speechNote"></div>
       </div>
       <div class="setting">
-        <div class="label">Difficulty</div>
+        <div class="label">Words to test</div>
         <div class="seg" id="diffSeg">
           <button data-diff="easy">🥚 Easy</button>
           <button data-diff="medium">🍳 Medium</button>
           <button data-diff="hard">🎩 Hard</button>
+          <button data-diff="all">All</button>
         </div>
       </div>
       <div class="setting">
@@ -406,23 +407,23 @@
    ============================================================ */
 const WORDS = [
   { w:"a",        tier:1 }, { w:"am",      tier:1 }, { w:"and",   tier:1 },
-  { w:"are",      tier:1 }, { w:"be",      tier:1 }, { w:"do",    tier:1 },
-  { w:"eat",      tier:1 }, { w:"the",     tier:1 }, { w:"I",     tier:1 },
+  { w:"be",       tier:1 }, { w:"do",      tier:1 }, { w:"I",     tier:1 },
   { w:"if",       tier:1 }, { w:"in",      tier:1 }, { w:"me",    tier:1 },
   { w:"not",      tier:1 }, { w:"on",      tier:1 }, { w:"or",    tier:1 },
   { w:"so",       tier:1 }, { w:"you",     tier:1 }, { w:"see",   tier:1 },
   { w:"say",      tier:1 },
-  { w:"boat",     tier:2 }, { w:"box",     tier:2 }, { w:"car",   tier:2 },
-  { w:"dark",     tier:2 }, { w:"eggs",    tier:2 }, { w:"fox",   tier:2 },
-  { w:"goat",     tier:2 }, { w:"good",    tier:2 }, { w:"green", tier:2 },
-  { w:"ham",      tier:2 }, { w:"here",    tier:2 }, { w:"let",   tier:2 },
-  { w:"like",     tier:2 }, { w:"may",     tier:2 }, { w:"rain",  tier:2 },
-  { w:"Sam",      tier:2 }, { w:"that",    tier:2 }, { w:"them",  tier:2 },
-  { w:"they",     tier:2 }, { w:"there",   tier:2 }, { w:"thank", tier:2 },
-  { w:"tree",     tier:2 }, { w:"try",     tier:2 }, { w:"will",  tier:2 },
-  { w:"with",     tier:2 }, { w:"house",   tier:2 }, { w:"mouse", tier:2 },
-  { w:"train",    tier:2 },
-  { w:"anywhere", tier:3 }, { w:"could",   tier:3 }, { w:"would", tier:3 }
+  { w:"are",      tier:2 }, { w:"boat",    tier:2 }, { w:"box",   tier:2 },
+  { w:"eat",      tier:2 }, { w:"eggs",    tier:2 }, { w:"fox",   tier:2 },
+  { w:"goat",     tier:2 }, { w:"ham",     tier:2 }, { w:"let",   tier:2 },
+  { w:"may",      tier:2 }, { w:"rain",    tier:2 }, { w:"Sam",   tier:2 },
+  { w:"that",     tier:2 }, { w:"the",     tier:2 }, { w:"them",  tier:2 },
+  { w:"will",     tier:2 }, { w:"with",    tier:2 },
+  { w:"anywhere", tier:3 }, { w:"car",     tier:3 }, { w:"could", tier:3 },
+  { w:"dark",     tier:3 }, { w:"good",    tier:3 }, { w:"green", tier:3 },
+  { w:"here",     tier:3 }, { w:"house",   tier:3 }, { w:"like",  tier:3 },
+  { w:"mouse",    tier:3 }, { w:"thank",   tier:3 }, { w:"there", tier:3 },
+  { w:"they",     tier:3 }, { w:"train",   tier:3 }, { w:"tree",  tier:3 },
+  { w:"try",      tier:3 }, { w:"would",   tier:3 }
 ];
 
 /* Sounds-alike words the speech recogniser may return instead.
@@ -463,7 +464,7 @@ const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
 const LS_KEY = "eviegh-settings";
 
 const settings = Object.assign(
-  { mode:"manual", diff:"easy", sound:false },
+  { mode:"manual", diff:"all", sound:false },
   (() => { try { return JSON.parse(localStorage.getItem(LS_KEY)) || {}; } catch { return {}; } })()
 );
 if (settings.mode === "speech" && !SR) settings.mode = "manual";
@@ -488,15 +489,17 @@ const stage = $("stage"), wordEl = $("word"), hintEl = $("hint"),
 /* ============================================================
    DECK
    ============================================================ */
-const TIER_MAX = { easy:1, medium:2, hard:3 };
+const TIER_BY_DIFFICULTY = { easy:1, medium:2, hard:3 };
 
 function buildDeck(){
-  const max = TIER_MAX[settings.diff] || 1;
-  deck = WORDS.filter(x => x.tier <= max).map(x => x.w);
-  for (let i = deck.length - 1; i > 0; i--){           // Fisher–Yates
+  const tier = TIER_BY_DIFFICULTY[settings.diff] || 1;
+  const words = WORDS.filter(x => settings.diff === "all" || x.tier === tier);
+  for (let i = words.length - 1; i > 0; i--){           // Fisher–Yates
     const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+    [words[i], words[j]] = [words[j], words[i]];
   }
+  if (settings.diff === "all") words.sort((first, second) => second.tier - first.tier);
+  deck = words.map(x => x.w);
   total = deck.length;
   history = [];
 }
