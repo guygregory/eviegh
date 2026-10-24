@@ -156,7 +156,7 @@
     pointer-events:none;
   }
   #progressTrack{
-    position:absolute; inset:0; border-radius:inherit; overflow:hidden;
+    position:absolute; top:0; right:0; bottom:0; left:0; border-radius:inherit; overflow:hidden;
   }
   #progressFill{
     height:100%; width:0%;
@@ -180,7 +180,7 @@
 
   /* ---------- finish screen ---------- */
   #finish{
-    position:fixed; inset:0; z-index:6;
+    position:fixed; top:0; right:0; bottom:0; left:0; z-index:6;
     display:none; flex-direction:column; align-items:center; justify-content:center;
     gap:2vmin; cursor:pointer;
     background:
@@ -239,7 +239,8 @@
     width:.14em; height:.14em; border-radius:50%;
     background:currentColor; transform:translateX(-50%);
   }
-  #gearBtn{ top:2.2vh; right:2vw; background:var(--sun); }
+  #gearBtn{ top:2.2vh; right:2vw; background:var(--sun); color:var(--ink); }
+  #gearBtn svg{ width:1em; height:1em; pointer-events:none; }
   #speakBtn{ bottom:2.2vh; right:2vw; background:#fff; }
   #backBtn{
     bottom:2.2vh; left:2vw;
@@ -298,7 +299,7 @@
     to{ transform:translate(var(--dx), var(--dy)) scale(1.4) rotate(var(--rot)); opacity:0; }
   }
   #cheer{
-    position:fixed; inset:0; z-index:7; pointer-events:none;
+    position:fixed; top:0; right:0; bottom:0; left:0; z-index:7; pointer-events:none;
     display:flex; align-items:center; justify-content:center;
     font-size:9vmin; font-weight:700; color:var(--seuss-red);
     text-shadow:.5vmin .5vmin 0 #fff, -.5vmin -.5vmin 0 #fff, .5vmin -.5vmin 0 #fff, -.5vmin .5vmin 0 #fff;
@@ -314,7 +315,7 @@
 
   /* ---------- settings panel ---------- */
   #overlay{
-    position:fixed; inset:0; z-index:10;
+    position:fixed; top:0; right:0; bottom:0; left:0; z-index:10;
     background:rgba(13,40,30,.55);
     display:none; align-items:center; justify-content:center;
     cursor:default;
@@ -414,7 +415,13 @@
   </div>
 
   <button id="phonicsBtn" class="round-btn" aria-label="Show phonics hints" aria-pressed="false" title="Show phonics hints"><span class="phonics-icon" aria-hidden="true">a</span></button>
-  <button id="gearBtn" class="round-btn" aria-label="Settings">⚙️</button>
+  <button id="gearBtn" class="round-btn" aria-label="Settings">
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor">
+      <path d="M12 2v3m0 14v3M2 12h3m14 0h3M5 5l2 2m10 10 2 2M5 19l2-2M17 7l2-2" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="12" cy="12" r="7" stroke-width="3"/>
+      <circle cx="12" cy="12" r="2.5" stroke-width="2"/>
+    </svg>
+  </button>
   <button id="speakBtn" class="round-btn" aria-label="Hear the word">🔊</button>
   <button id="backBtn" class="round-btn" aria-label="Back to the previous word">↩️</button>
   <button id="skipBtn" aria-label="Skip this word">Skip ⏭️</button>
@@ -779,7 +786,7 @@ function restartGame(){
   if (settings.mode === "speech") startListening();
 }
 
-$("finish").addEventListener("pointerdown", e => {
+$("finish").addEventListener("click", e => {
   e.stopPropagation();
   blip();
   restartGame();
@@ -802,12 +809,12 @@ function advance(withParty){
 }
 
 /* manual input */
-stage.addEventListener("pointerdown", () => {
+stage.addEventListener("click", () => {
   ctx();                                   // unlock audio on first gesture
   if (settings.mode === "manual") advance(false);
 });
 window.addEventListener("keydown", e => {
-  if (e.target.closest("button")?.id === "phonicsBtn") return;
+  if (e.target.closest("button")) return;
   if (e.code === "Space" && !overlay.classList.contains("open")){
     e.preventDefault();
     if (finished){ blip(); restartGame(); return; }
@@ -901,12 +908,12 @@ function stopListening(){
   ear.classList.remove("listening");
 }
 
-$("skipBtn").addEventListener("pointerdown", e => {
+$("skipBtn").addEventListener("click", e => {
   e.stopPropagation();
   advance(false);                        // no mic restart needed
 });
 
-$("backBtn").addEventListener("pointerdown", e => {
+$("backBtn").addEventListener("click", e => {
   e.stopPropagation();
   blip();
   prevWord();
@@ -915,7 +922,7 @@ $("backBtn").addEventListener("pointerdown", e => {
 /* ============================================================
    HEAR-THE-WORD (text-to-speech)
    ============================================================ */
-$("speakBtn").addEventListener("pointerdown", e => {
+$("speakBtn").addEventListener("click", e => {
   e.stopPropagation();
   if (!("speechSynthesis" in window) || !current) return;
   speechSynthesis.cancel();
@@ -971,7 +978,7 @@ $("soundSeg").addEventListener("click", e => {
   saveSettings(); paintSettings();
 });
 
-$("gearBtn").addEventListener("pointerdown", e => {
+$("gearBtn").addEventListener("click", e => {
   e.stopPropagation();
   stopListening();
   overlay.classList.add("open");
@@ -988,7 +995,7 @@ function closePanel(){
   if (settings.mode === "speech") startListening();
 }
 $("closeBtn").addEventListener("click", closePanel);
-overlay.addEventListener("pointerdown", e => {
+overlay.addEventListener("click", e => {
   e.stopPropagation();
   if (e.target === overlay) closePanel();
 });
