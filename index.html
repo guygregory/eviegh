@@ -589,7 +589,7 @@ function prevWord(){
 }
 
 function updateProgress(){
-  const done = finished ? total : Math.max(0, total - deck.length - 1);
+  const done = finished ? total : Math.max(0, total - deck.length);
   const pct = total ? (done / total) * 100 : 0;
   $("progressFill").style.width = pct + "%";
   $("progressEgg").style.left = pct + "%";
