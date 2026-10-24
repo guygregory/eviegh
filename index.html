@@ -241,6 +241,10 @@
   }
   #gearBtn{ top:2.2vh; right:2vw; background:var(--sun); color:var(--ink); }
   #gearBtn svg{ width:1em; height:1em; pointer-events:none; }
+  .control-icon{
+    width:1em; height:1em; vertical-align:-.15em;
+    flex:none;
+  }
   #speakBtn{ bottom:2.2vh; right:2vw; background:#fff; }
   #backBtn{
     bottom:2.2vh; left:2vw;
@@ -424,7 +428,12 @@
   </button>
   <button id="speakBtn" class="round-btn" aria-label="Hear the word">🔊</button>
   <button id="backBtn" class="round-btn" aria-label="Back to the previous word">↩️</button>
-  <button id="skipBtn" aria-label="Skip this word">Skip ⏭️</button>
+  <button id="skipBtn" aria-label="Skip this word">
+    Skip
+    <svg class="control-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M4 4v16l10-8L4 4zm11 0v16l7-8-7-8z"/>
+    </svg>
+  </button>
 
   <div id="overlay">
     <div id="panel" role="dialog" aria-label="Settings">
@@ -440,7 +449,12 @@
       <div class="setting">
         <div class="label">Words to test</div>
         <div class="seg" id="diffSeg">
-          <button data-diff="easy">🥚 Easy</button>
+          <button data-diff="easy">
+            <svg class="control-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2.5c-4.2 0-8 7-8 12.2a8 8 0 0 0 16 0C20 9.5 16.2 2.5 12 2.5z"/>
+            </svg>
+            Easy
+          </button>
           <button data-diff="medium">🍳 Medium</button>
           <button data-diff="hard">🎩 Hard</button>
           <button data-diff="all">All</button>
